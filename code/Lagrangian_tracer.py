@@ -1,91 +1,91 @@
 import numpy as np
 from mode_truc import truncate, inv_truncate
 
-# from numba import jit, prange
-# @jit(nopython=True, parallel=True, fastmath=True)
-# def for_loop_tracer(K, ens, L, N, dt, x, y, KX_flat, KY_flat, psi_hat_flat, sigma_xy):
-#     KX_flat_c = np.ascontiguousarray(KX_flat[None, :])
-#     KY_flat_c = np.ascontiguousarray(KY_flat[None, :])
-#     for e in prange(ens):  # Parallelize over ensemble members
-#         for i in range(1, N+1):
-#             exp_term = np.exp(1j * x[e, :, i-1][:, None] @ KX_flat_c + 1j * y[e, :, i-1][:, None] @ KY_flat_c)
-#             uk = (psi_hat_flat[e, i-1, :] * (1j) * KY_flat)
-#             vk = (psi_hat_flat[e, i-1, :] * (-1j) * KX_flat)
+from numba import jit, prange
+@jit(nopython=True, parallel=True, fastmath=True)
+def for_loop_tracer(K, ens, L, N, dt, x, y, KX_flat, KY_flat, psi_hat_flat, sigma_xy):
+    KX_flat_c = np.ascontiguousarray(KX_flat[None, :])
+    KY_flat_c = np.ascontiguousarray(KY_flat[None, :])
+    for e in prange(ens):  # Parallelize over ensemble members
+        for i in range(1, N+1):
+            exp_term = np.exp(1j * x[e, :, i-1][:, None] @ KX_flat_c + 1j * y[e, :, i-1][:, None] @ KY_flat_c)
+            uk = (psi_hat_flat[e, i-1, :] * (1j) * KY_flat)
+            vk = (psi_hat_flat[e, i-1, :] * (-1j) * KX_flat)
 
-#             # # ensure conjugate symmetric
-#             # if style == 'square' and psi_hat.shape[0] == K:
-#             #     uk[K//2::K] = 0; uk[K*K//2:K*(K//2 + 1)] = 0
-#             #     vk[K//2::K] = 0; vk[K*K//2:K*(K//2 + 1)] = 0 
+            # # ensure conjugate symmetric
+            # if style == 'square' and psi_hat.shape[0] == K:
+            #     uk[K//2::K] = 0; uk[K*K//2:K*(K//2 + 1)] = 0
+            #     vk[K//2::K] = 0; vk[K*K//2:K*(K//2 + 1)] = 0 
             
-#             u = np.real(exp_term @ uk) / K**2
-#             v = np.real(exp_term @ vk) / K**2
+            u = np.real(exp_term @ uk) / K**2
+            v = np.real(exp_term @ vk) / K**2
             
-#             x[e, :, i] = x[e, :, i-1] + u * dt + np.random.randn(L) * sigma_xy * np.sqrt(dt)
-#             y[e, :, i] = y[e, :, i-1] + v * dt + np.random.randn(L) * sigma_xy * np.sqrt(dt)
-#             x[e, :, i] = np.mod(x[e, :, i], 2*np.pi)  # Periodic boundary conditions
-#             y[e, :, i] = np.mod(y[e, :, i], 2*np.pi)  # Periodic boundary conditions
+            x[e, :, i] = x[e, :, i-1] + u * dt + np.random.randn(L) * sigma_xy * np.sqrt(dt)
+            y[e, :, i] = y[e, :, i-1] + v * dt + np.random.randn(L) * sigma_xy * np.sqrt(dt)
+            x[e, :, i] = np.mod(x[e, :, i], 2*np.pi)  # Periodic boundary conditions
+            y[e, :, i] = np.mod(y[e, :, i], 2*np.pi)  # Periodic boundary conditions
 
-#     return x, y
+    return x, y
 
-##################### faster tracer loop with jax #################
-import jax
-import jax.numpy as jnp
-from jax_finufft import nufft2
-jax.config.update("jax_enable_x64", True) # Enable float64 in JAX for tight agreement
-def for_loop_tracer_jax(K, ens, L, N, dt, x, y, psi_hat, sigma_xy, key, eps=1e-9):
-    # decide real dtype from complex dtype
-    ctype = jnp.asarray(psi_hat).dtype
-    rtype = jnp.float64 if ctype == jnp.complex128 else jnp.float32
+# ##################### faster tracer loop with jax #################
+# import jax
+# import jax.numpy as jnp
+# from jax_finufft import nufft2
+# jax.config.update("jax_enable_x64", True) # Enable float64 in JAX for tight agreement
+# def for_loop_tracer_jax(K, ens, L, N, dt, x, y, psi_hat, sigma_xy, key, eps=1e-9):
+#     # decide real dtype from complex dtype
+#     ctype = jnp.asarray(psi_hat).dtype
+#     rtype = jnp.float64 if ctype == jnp.complex128 else jnp.float32
 
-    # JAX scalars
-    dt_r   = jnp.asarray(dt, dtype=rtype)
-    sig_r  = jnp.asarray(sigma_xy, dtype=rtype)
-    twopi  = jnp.asarray(2 * jnp.pi, dtype=rtype)
-    invK2  = jnp.asarray(1.0 / (K * K), dtype=rtype)
-    sdt    = jnp.sqrt(dt_r) * sig_r
+#     # JAX scalars
+#     dt_r   = jnp.asarray(dt, dtype=rtype)
+#     sig_r  = jnp.asarray(sigma_xy, dtype=rtype)
+#     twopi  = jnp.asarray(2 * jnp.pi, dtype=rtype)
+#     invK2  = jnp.asarray(1.0 / (K * K), dtype=rtype)
+#     sdt    = jnp.sqrt(dt_r) * sig_r
 
-    # Initial positions
-    x0 = jnp.asarray(x[:, :, 0], dtype=rtype)
-    y0 = jnp.asarray(y[:, :, 0], dtype=rtype)
+#     # Initial positions
+#     x0 = jnp.asarray(x[:, :, 0], dtype=rtype)
+#     y0 = jnp.asarray(y[:, :, 0], dtype=rtype)
 
-    # Wavenumbers in FFT order (JAX fftfreq)
-    k_fft = (jnp.fft.fftfreq(K) * K).astype(rtype)
-    k_nat = jnp.fft.fftshift(k_fft)     
-    kx, ky = jnp.meshgrid(k_nat, k_nat)
+#     # Wavenumbers in FFT order (JAX fftfreq)
+#     k_fft = (jnp.fft.fftfreq(K) * K).astype(rtype)
+#     k_nat = jnp.fft.fftshift(k_fft)     
+#     kx, ky = jnp.meshgrid(k_nat, k_nat)
 
-    # Time-major psi
-    psi_seq = jnp.swapaxes(jnp.asarray(psi_hat), 0, 1) # (N, ens, K, K)
+#     # Time-major psi
+#     psi_seq = jnp.swapaxes(jnp.asarray(psi_hat), 0, 1) # (N, ens, K, K)
 
-    def uv_one(psi_e, x_e, y_e):
-        psi_e = jnp.fft.fftshift(psi_e, axes=(0, 1))
-        uhat = 1j * ky * psi_e
-        vhat = -1j * kx * psi_e
-        xx = x_e % (2 * jnp.pi)
-        yy = y_e % (2 * jnp.pi)
-        u = nufft2(uhat, yy, xx, iflag=1, eps=eps).real * invK2
-        v = nufft2(vhat, yy, xx, iflag=1, eps=eps).real * invK2
-        return u, v
+#     def uv_one(psi_e, x_e, y_e):
+#         psi_e = jnp.fft.fftshift(psi_e, axes=(0, 1))
+#         uhat = 1j * ky * psi_e
+#         vhat = -1j * kx * psi_e
+#         xx = x_e % (2 * jnp.pi)
+#         yy = y_e % (2 * jnp.pi)
+#         u = nufft2(uhat, yy, xx, iflag=1, eps=eps).real * invK2
+#         v = nufft2(vhat, yy, xx, iflag=1, eps=eps).real * invK2
+#         return u, v
 
-    uv_batched = jax.vmap(uv_one, in_axes=(0, 0, 0), out_axes=(0, 0))
+#     uv_batched = jax.vmap(uv_one, in_axes=(0, 0, 0), out_axes=(0, 0))
 
-    def step(carry, psi_t):
-        x_t, y_t, key_t = carry
-        u_t, v_t = uv_batched(psi_t, x_t, y_t)
-        key_t, kxkey, kykey = jax.random.split(key_t, 3)
-        xi_x = jax.random.normal(kxkey, shape=x_t.shape, dtype=rtype)
-        xi_y = jax.random.normal(kykey, shape=y_t.shape, dtype=rtype)
-        x_new = (x_t + dt_r * u_t + sdt * xi_x) % twopi
-        y_new = (y_t + dt_r * v_t + sdt * xi_y) % twopi
-        return (x_new, y_new, key_t), (x_new, y_new)
+#     def step(carry, psi_t):
+#         x_t, y_t, key_t = carry
+#         u_t, v_t = uv_batched(psi_t, x_t, y_t)
+#         key_t, kxkey, kykey = jax.random.split(key_t, 3)
+#         xi_x = jax.random.normal(kxkey, shape=x_t.shape, dtype=rtype)
+#         xi_y = jax.random.normal(kykey, shape=y_t.shape, dtype=rtype)
+#         x_new = (x_t + dt_r * u_t + sdt * xi_x) % twopi
+#         y_new = (y_t + dt_r * v_t + sdt * xi_y) % twopi
+#         return (x_new, y_new, key_t), (x_new, y_new)
 
-    carry0 = (x0, y0, key)
-    (xf, yf, _), (xs_hist, ys_hist) = jax.lax.scan(step, carry0, psi_seq[:-1])
-    xs_hist = jnp.transpose(xs_hist, (1, 2, 0)) 
-    ys_hist = jnp.transpose(ys_hist, (1, 2, 0))
-    x_out = jnp.concatenate([x0[:, :, None], xs_hist], axis=-1)
-    y_out = jnp.concatenate([y0[:, :, None], ys_hist], axis=-1)
-    return x_out, y_out
-for_loop_tracer_jax = jax.jit(for_loop_tracer_jax, static_argnums=(0, 1, 2, 3), static_argnames=("eps",))
+#     carry0 = (x0, y0, key)
+#     (xf, yf, _), (xs_hist, ys_hist) = jax.lax.scan(step, carry0, psi_seq[:-1])
+#     xs_hist = jnp.transpose(xs_hist, (1, 2, 0)) 
+#     ys_hist = jnp.transpose(ys_hist, (1, 2, 0))
+#     x_out = jnp.concatenate([x0[:, :, None], xs_hist], axis=-1)
+#     y_out = jnp.concatenate([y0[:, :, None], ys_hist], axis=-1)
+#     return x_out, y_out
+# for_loop_tracer_jax = jax.jit(for_loop_tracer_jax, static_argnums=(0, 1, 2, 3), static_argnames=("eps",))
 
 
 class Lagrange_tracer_model:
@@ -224,11 +224,11 @@ class Lagrange_tracer_model:
         x[:,:,0] = x0
         y[:,:,0] = y0
 
-        # psi_hat_flat = np.reshape(psi_hat, (ens, N+1, -1))
-        # x, y = for_loop_tracer(K, ens, L, N, dt, x, y, KX_flat, KY_flat, psi_hat_flat, sigma_xy)
+        psi_hat_flat = np.reshape(psi_hat, (ens, N+1, -1))
+        x, y = for_loop_tracer(K, ens, L, N, dt, x, y, KX_flat, KY_flat, psi_hat_flat, sigma_xy)
 
-        key = jax.random.PRNGKey(np.random.randint(-2147483648, 2147483648))
-        xJ, yJ = for_loop_tracer_jax(K, ens, L, N, dt, x, y, psi_hat, sigma_xy, key, eps=eps_nufft)
-        x = np.array(xJ); y = np.array(yJ)
+        # key = jax.random.PRNGKey(np.random.randint(-2147483648, 2147483648))
+        # xJ, yJ = for_loop_tracer_jax(K, ens, L, N, dt, x, y, psi_hat, sigma_xy, key, eps=eps_nufft)
+        # x = np.array(xJ); y = np.array(yJ)
 
         return x, y

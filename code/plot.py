@@ -145,7 +145,7 @@ def plot_flow_comparison(q1_list, q2_list, method_names, time_indices, colorlim=
     num_times = len(time_indices)
     
     total_rows = 2 * num_methods + 1  # +1 spacer row between layers
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(8, total_rows*1.2))
     gs = gridspec.GridSpec(total_rows, num_times, height_ratios=[1]*num_methods + [0.01] + [1]*num_methods)
     extent = [0, 2*np.pi, 0, 2*np.pi]
 
@@ -163,7 +163,7 @@ def plot_flow_comparison(q1_list, q2_list, method_names, time_indices, colorlim=
             im1 = ax1.imshow(q1_list[i, j], cmap=cmap, origin='lower',
                              extent=extent, vmin=vmin, vmax=vmax, aspect='auto')
             if j == 0:
-                ax1.set_ylabel(f'{method_names[i]}', fontsize=12)
+                ax1.set_ylabel(method_names[i], fontsize=12)
             ax1.set_xticks([])
             ax1.set_yticks([])
             axes.append(ax1)
@@ -175,7 +175,7 @@ def plot_flow_comparison(q1_list, q2_list, method_names, time_indices, colorlim=
             if i == num_methods-1:
                 ax2.set_xlabel(f't={t_idx:.2f}', fontsize=12)
             if j == 0:
-                ax2.set_ylabel(f'{method_names[i]}', fontsize=12)
+                ax2.set_ylabel(method_names[i], fontsize=12)
             ax2.set_xticks([])
             ax2.set_yticks([])
             axes.append(ax2)
@@ -459,66 +459,129 @@ def plot_psi1_k_seriespdf(dt, sel0, sel1, ikx, iky, interv, xlim, ylim, xt, yt, 
     plt.legend(prop={'size': 8}, bbox_to_anchor=(1, 1))
     plt.tight_layout()
 
+# def plot_layer_seriespdf(dt, sel0, sel1, ikx, iky, interv, xlim, ylim_series, ylim_pdf, psi1, psi2, labels, colors, std1, std2):
+#     from scipy.stats import gaussian_kde, norm
+#     xaxis = np.arange(sel0*dt, sel1*dt, interv*dt)
+#     Nx = std1[0].shape[2]
+    
+#     fig = plt.figure(figsize=(9,3.5))
+#     widths = [5, 1]
+#     heights = [1, 1]
+#     spec = fig.add_gridspec(ncols=2, nrows=2, width_ratios=widths, height_ratios=heights)
+    
+#     plt.subplots_adjust(wspace=0.35, hspace=0.5)     # Adjust the overall spacing of the figure
+#     ax1 = fig.add_subplot(spec[0, 0])
+#     ax2 = fig.add_subplot(spec[1, 0])
+#     ax3 = fig.add_subplot(spec[0, 1])
+#     ax4 = fig.add_subplot(spec[1, 1])
 
-def plot_layer_seriespdf(dt, sel0, sel1, ikx, iky, interv, xlim, ylim, psi1, psi2, labels, colors):
+#     lines = []
+#     # plot time series
+#     for i, data in enumerate(psi1):
+#         series = data[sel0:sel1:interv,iky,ikx]
+#         std = std1[i][sel0:sel1:interv,iky,ikx]
+#         ax1.plot(xaxis, series, colors[i], label=labels[i])
+#         ax1.fill_between(xaxis, series - 2*std, series + 2*std, color=colors[i], alpha=0.1)
+      
+#         samples = data[sel0:sel1, iky, ikx]
+#         kde = gaussian_kde(samples)
+#         xticks = np.linspace(samples.min(), samples.max(), 100)
+#         p = kde.evaluate(xticks)
+#         ax3.plot(p, xticks, colors[i])
+    
+#     ax1.set_ylabel(r'$\psi_{{1,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
+#     ax1.set_xlim(xlim)
+#     ax1.set_ylim((-ylim_series[0], ylim_series[0]))
+    
+#     samples = psi1[0][sel0:sel1, iky, ikx]
+#     mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
+#     gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
+#     ax3.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
+#     ax3.set_xscale('log', base=10) 
+#     ax3.set_title('log PDF')
+    
+#     # plot time series
+#     for i, data in enumerate(psi2):
+#         series = data[sel0:sel1:interv,iky,ikx]
+#         std = std2[i][sel0:sel1:interv,iky,ikx]
+#         line, = ax2.plot(xaxis, series, colors[i], label=labels[i])
+#         lines.append(line)
+#         ax2.fill_between(xaxis, series - 2*std, series + 2*std, color=colors[i], alpha=0.1)
+    
+#         samples = data[sel0:sel1, iky, ikx]
+#         kde = gaussian_kde(samples)
+#         xticks = np.linspace(samples.min(), samples.max(), 100)
+#         p = kde.evaluate(xticks)
+#         ax4.plot(p, xticks, colors[i])
+
+#     ax2.set_ylabel(r'$\psi_{{2,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
+#     ax2.set_xlim(xlim)
+#     ax2.set_xlabel('t')
+#     ax2.set_ylim((-ylim_series[1], ylim_series[1]))
+ 
+#     samples = psi2[0][sel0:sel1, iky, ikx]
+#     mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
+#     gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
+#     ax4.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
+#     ax4.set_xscale('log', base=10) 
+#     ax4.set_xlim(ylim_pdf[0], np.max(p)+ylim_pdf[1])
+
+#     fig.legend(
+#         handles=lines,
+#         labels=labels,
+#         loc='upper center',
+#         bbox_to_anchor=(0.5, 1.0),
+#         ncol=len(labels),
+#         fontsize=9
+#     )
+#     plt.tight_layout(rect=[0, 0, 1, 0.97])
+
+def plot_layer_series(dt, sel0, sel1, ikx, iky, interv, xlim, ylim, psi1, psi2, labels, colors, std1, std2):
     xaxis = np.arange(sel0*dt, sel1*dt, interv*dt)
+    Nx = std1[0].shape[2]
     
     fig = plt.figure(figsize=(9,3.5))
-    widths = [5, 1]
+    widths = [6]
     heights = [1, 1]
-    spec = fig.add_gridspec(ncols=2, nrows=2, width_ratios=widths, height_ratios=heights)
+    spec = fig.add_gridspec(ncols=1, nrows=2, width_ratios=widths, height_ratios=heights)
     
     plt.subplots_adjust(wspace=0.35, hspace=0.5)     # Adjust the overall spacing of the figure
     ax1 = fig.add_subplot(spec[0, 0])
     ax2 = fig.add_subplot(spec[1, 0])
-    ax3 = fig.add_subplot(spec[0, 1])
-    ax4 = fig.add_subplot(spec[1, 1])
-    
+    lines = []
     # plot time series
     for i, data in enumerate(psi1):
-        ax1.plot(xaxis, data[iky,ikx,sel0:sel1:interv], colors[i], label=labels[i])
-    
-        samples = data[iky, ikx, sel0:sel1]
-        kde = gaussian_kde(samples)
-        xticks = np.linspace(samples.min(), samples.max(), 100)
-        p = kde.evaluate(xticks)
-        ax3.plot(p, xticks, colors[i], label=labels[i])
-    
-    ax1.set_ylabel(r'$\psi_{{1,({:d},{:d})}}$'.format(ikx, iky))
+        series = data[sel0:sel1:interv,iky,ikx]
+        std = std1[i][sel0:sel1:interv,iky,ikx]
+        ax1.plot(xaxis, series, colors[i], label=labels[i])
+        ax1.fill_between(xaxis, series - 2*std, series + 2*std, color=colors[i], alpha=0.1)
+      
+    ax1.set_ylabel(r'$\psi_{{1,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
     ax1.set_xlim(xlim)
-    ax1.set_title('Time series')
-    
-    samples = psi1[0][iky, ikx, sel0:sel1]
-    mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
-    gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
-    ax3.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
-    ax3.set_xscale('log', base=10) 
-    ax3.set_title('log PDF')
+    ax1.set_ylim((-ylim[0], ylim[0]))
     
     # plot time series
     for i, data in enumerate(psi2):
-        ax2.plot(xaxis, data[iky,ikx,sel0:sel1:interv], colors[i], label=labels[i])
+        series = data[sel0:sel1:interv,iky,ikx]
+        std = std2[i][sel0:sel1:interv,iky,ikx]
+        line, = ax2.plot(xaxis, series, colors[i], label=labels[i])
+        lines.append(line)
+        ax2.fill_between(xaxis, series - 2*std, series + 2*std, color=colors[i], alpha=0.1)
     
-        samples = data[iky, ikx, sel0:sel1]
-        kde = gaussian_kde(samples)
-        xticks = np.linspace(samples.min(), samples.max(), 100)
-        p = kde.evaluate(xticks)
-        ax4.plot(p, xticks, colors[i], label=labels[i])
-    
-    ax2.set_ylabel(r'$\psi_{{2,({:d},{:d})}}$'.format(ikx, iky))
+    ax2.set_ylabel(r'$\psi_{{2,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
     ax2.set_xlim(xlim)
     ax2.set_xlabel('t')
-    
-    samples = psi2[0][iky, ikx, sel0:sel1]
-    mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
-    gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
-    ax4.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
-    ax4.set_xscale('log', base=10) 
-    ax4.set_xlim(ylim[0], np.max(p)+ylim[1])
-    
-    plt.legend(prop={'size': 8}, bbox_to_anchor=(1, 1))
-    plt.tight_layout()
-
+    ax2.set_ylim((-ylim[1], ylim[1]))
+ 
+    fig.legend(
+        handles=lines,
+        labels=labels,
+        loc='upper center',
+        bbox_to_anchor=(0.5, 1.0),
+        ncol=len(labels),
+        fontsize=9
+    )
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
 
 def plot_mses(dt, sel0, sel1, s_rate, interv, xlim, data1, data2, labels, colors, ylims=None):
     xaxis = np.arange(sel0 * s_rate * dt, sel1 * s_rate * dt, interv * s_rate * dt)
@@ -936,7 +999,7 @@ def plot_rmses(dt_obs, sel0, sel1, interv, xlim, data1, data2, labels, colors, y
         ax1.plot(xaxis, data[sel0:sel1:interv], colors[i], label=labels[i])
 
     ax1.set_xlim(sel0 * dt_obs, sel1 * dt_obs)
-    ax1.set_ylabel(r'RMSE ($\psi_1$)')
+    ax1.set_ylabel(r'RMSE/spread ($\psi_1$)')
     ax1.set_xlim(xlim)
 
     for i, data in enumerate(data2):
@@ -944,7 +1007,7 @@ def plot_rmses(dt_obs, sel0, sel1, interv, xlim, data1, data2, labels, colors, y
         lines.append(line)
 
     ax2.set_xlim(sel0 * dt_obs, sel1 * dt_obs)
-    ax2.set_ylabel(r'RMSE ($\psi_2)$')
+    ax2.set_ylabel(r'RMSE/spread ($\psi_2)$')
     ax2.set_xlabel('t')
     ax2.set_xlim(xlim)
 
@@ -957,86 +1020,12 @@ def plot_rmses(dt_obs, sel0, sel1, interv, xlim, data1, data2, labels, colors, y
         handles=lines,
         labels=labels,
         loc='upper center',
-        bbox_to_anchor=(0.5, 1.0),
-        ncol=len(labels),
+        bbox_to_anchor=(0.5, 1.),
+        ncol=3,
         fontsize=9
     )
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96]) 
+    plt.tight_layout(rect=[0, 0, 1, 0.9]) 
 
-def plot_layer_seriespdf(dt, sel0, sel1, ikx, iky, interv, xlim, ylim, psi1, psi2, labels, colors, std1, std2):
-    from scipy.stats import gaussian_kde, norm
-    xaxis = np.arange(sel0*dt, sel1*dt, interv*dt)
-    Nx = std1[0].shape[2]
-    
-    fig = plt.figure(figsize=(9,3.5))
-    widths = [5, 1]
-    heights = [1, 1]
-    spec = fig.add_gridspec(ncols=2, nrows=2, width_ratios=widths, height_ratios=heights)
-    
-    plt.subplots_adjust(wspace=0.35, hspace=0.5)     # Adjust the overall spacing of the figure
-    ax1 = fig.add_subplot(spec[0, 0])
-    ax2 = fig.add_subplot(spec[1, 0])
-    ax3 = fig.add_subplot(spec[0, 1])
-    ax4 = fig.add_subplot(spec[1, 1])
-
-    lines = []
-    # plot time series
-    for i, data in enumerate(psi1):
-        series = data[sel0:sel1:interv,iky,ikx]
-        std = std1[i][sel0:sel1:interv,iky,ikx]
-        ax1.plot(xaxis, series, colors[i], label=labels[i])
-        ax1.fill_between(xaxis, series - std, series + std, color=colors[i], alpha=0.1)
-        
-        samples = data[sel0:sel1, iky, ikx]
-        kde = gaussian_kde(samples)
-        xticks = np.linspace(samples.min(), samples.max(), 100)
-        p = kde.evaluate(xticks)
-        ax3.plot(p, xticks, colors[i])
-    
-    ax1.set_ylabel(r'$\psi_{{1,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
-    ax1.set_xlim(xlim)
-    
-    samples = psi1[0][sel0:sel1, iky, ikx]
-    mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
-    gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
-    ax3.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
-    ax3.set_xscale('log', base=10) 
-    ax3.set_title('log PDF')
-    
-    # plot time series
-    for i, data in enumerate(psi2):
-        series = data[sel0:sel1:interv,iky,ikx]
-        std = std2[i][sel0:sel1:interv,iky,ikx]
-        line, = ax2.plot(xaxis, series, colors[i], label=labels[i])
-        lines.append(line)
-        ax2.fill_between(xaxis, series - std, series + std, color=colors[i], alpha=0.1)
-    
-        samples = data[sel0:sel1, iky, ikx]
-        kde = gaussian_kde(samples)
-        xticks = np.linspace(samples.min(), samples.max(), 100)
-        p = kde.evaluate(xticks)
-        ax4.plot(p, xticks, colors[i])
-
-    ax2.set_ylabel(r'$\psi_{{2,({:.2f},{:.2f})}}$'.format(ikx/Nx*2*np.pi, iky/Nx*2*np.pi))
-    ax2.set_xlim(xlim)
-    ax2.set_xlabel('t')
-    
-    samples = psi2[0][sel0:sel1, iky, ikx]
-    mean, std = samples.mean(), samples.std() # Fit a Gaussian to the same data
-    gaussian_pdf = norm.pdf(xticks, mean, std)  # Calculate the Gaussian PDF
-    ax4.plot(gaussian_pdf, xticks, 'k--', label='Gaussian fit')  # Dashed line for Gaussian
-    ax4.set_xscale('log', base=10) 
-    ax4.set_xlim(ylim[0], np.max(p)+ylim[1])
-
-    fig.legend(
-        handles=lines,
-        labels=labels,
-        loc='upper center',
-        bbox_to_anchor=(0.5, 1.0),
-        ncol=len(labels),
-        fontsize=9
-    )
-    plt.tight_layout(rect=[0, 0, 1, 0.97])
 
     
